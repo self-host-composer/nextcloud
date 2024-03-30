@@ -1,0 +1,49 @@
+version: "3.8"
+volumes:
+  nextcloud: null
+  db: null
+services:
+  db:
+    image: mariadb:10.6
+    restart: always
+    command: --transaction-isolation=READ-COMMITTED --log-bin=binlog --binlog-format=ROW
+    volumes:
+      - "${NEXTCLOUD_HOST_ROOT}/db_data/:/var/lib/mysql"
+    env_file:
+     - .env
+    networks:
+      - nextcloud
+  app:
+    image: nextcloud
+    restart: always
+    ports:
+      - 8180:80
+    links:
+      - db
+    volumes:
+      - "${NEXTCLOUD_HOST_ROOT}/data/:/var/www/html"
+    networks:
+      - nextcloud
+  redis:
+    image: redis:alpine
+    container_name: redis
+    volumes:
+      - "${NEXTCLOUD_HOST_ROOT}/data/redis:/data"
+    networks:
+      - nextcloud
+    restart: always
+  db_backup:
+    container_name: db_backup
+    image: tiredofit/db-backup
+    depends_on:
+      - db
+    volumes:
+      - "${NEXTCLOUD_HOST_BACKUP_LOCATION}/mysql_db/:/backup"
+      #- ./post-script.sh:/assets/custom-scripts/post-script.sh
+    env_file:
+     - .env
+     
+
+    restart: always
+networks:
+  nextcloud: {}
